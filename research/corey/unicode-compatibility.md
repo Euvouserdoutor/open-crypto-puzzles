@@ -2,6 +2,19 @@
 
 ## Status
 
+Phase 5 update: the original public source and its bundled `bip39.min.js`
+were recovered from the author's repository history. The deployed call is
+`bip39.mnemonicToSeed(mnemonic, passphrase)`, and the bundle applies
+`.normalize('NFKD')` to both arguments before UTF-8 encoding and PBKDF2.
+Executing that exact bundle on six controlled ASCII/Unicode passphrases matched
+the standards path in every case. Historical Unicode behavior is therefore
+**VERIFIED**. The original bundle remains fixed by repository commit
+`560b2a2f048c61a825f04e97412389a69d71159d`; its exact `bip39` npm release
+number is still unknown.
+
+The earlier Phase 4 finding below is retained as the audit trail that motivated
+the independent historical check.
+
 The standards path is fixed: BIP39 NFKD normalization is mandatory for both
 the mnemonic sentence and the passphrase before UTF-8 encoding and
 PBKDF2-HMAC-SHA512.
@@ -51,4 +64,3 @@ Do not use `raw-compat` in a real search unless primary evidence identifies the
 deployed dependency version or archived source and a reproducible test proves
 its byte-level behavior. Until then, any non-ASCII candidate result under that
 mode is a compatibility hypothesis, not an oracle verdict suitable for search.
-
