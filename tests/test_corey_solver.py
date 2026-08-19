@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -34,7 +35,7 @@ class TestSyntheticEngine(unittest.TestCase):
         payload = solver._checkpoint_payload(solver.new_checkpoint(1))
         payload["candidate_config_fingerprint"] = "f" * 64
         with self.assertRaises(solver.SolverError):
-            solver._parse_checkpoint(payload)
+            solver._parse_checkpoint(payload, "DRY_RUN")
 
 
 class TestCurrentTierContract(unittest.TestCase):
@@ -52,6 +53,76 @@ class TestCurrentTierContract(unittest.TestCase):
 
     def test_no_oracle_was_called(self):
         self.assertEqual(self.report["real_oracle_calls"], 0)
+
+    def test_strategy_fingerprint_is_recomputed(self):
+        self.assertEqual(
+            self.report["tier_strategy_fingerprint"],
+            "7f2685ceaeae227a4b85be8431c4c53546b26aa62938f6816282080a7211d61a",
+        )
+        self.assertEqual(
+            self.report["tier_strategy_fingerprint_verification"],
+            "RECOMPUTED_FROM_CANONICAL_OBJECT",
+        )
+
+
+class TestSyntheticEvaluationCheckpoint(unittest.TestCase):
+    def synthetic_rows(self):
+        return iter(
+            (
+                solver.TierCandidate(1, 0, "01" * 32, "alpha", "R901", "H901"),
+                solver.TierCandidate(1, 1, "02" * 32, "beta", "R901", "H901"),
+                solver.TierCandidate(1, 2, "03" * 32, "gamma", "R901", "H901"),
+            )
+        )
+
+    def test_evaluation_resume_and_match_are_synthetic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "checkpoint.json"
+            result_path = Path(directory) / "result.json"
+            with patch.object(solver, "_tier_records", side_effect=lambda _tier: self.synthetic_rows()):
+                checkpoint = solver.new_checkpoint(1, "EVALUATE")
+                checkpoint, status = solver.run_evaluation(
+                    checkpoint,
+                    max_candidates=2,
+                    max_seconds=None,
+                    checkpoint_path=checkpoint_path,
+                    result_path=result_path,
+                    evaluator=lambda _value: "NO_MATCH",
+                )
+                self.assertEqual(status, "EVALUATION_LIMIT_REACHED")
+                resumed = solver.load_checkpoint(checkpoint_path, "EVALUATE")
+                resumed, status = solver.run_evaluation(
+                    resumed,
+                    max_candidates=1,
+                    max_seconds=None,
+                    checkpoint_path=checkpoint_path,
+                    result_path=result_path,
+                    evaluator=lambda value: "MATCH" if value == "gamma" else "NO_MATCH",
+                )
+            self.assertEqual(status, "MATCH")
+            self.assertEqual(resumed.next_ordinal, 3)
+            self.assertEqual(resumed.match_candidate_id, "03" * 32)
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            self.assertEqual(result["passphrase"], "gamma")
+            self.assertEqual(result_path.stat().st_mode & 0o777, 0o600)
+
+    def test_oracle_error_does_not_advance_checkpoint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint_path = Path(directory) / "checkpoint.json"
+            result_path = Path(directory) / "result.json"
+            checkpoint = solver.new_checkpoint(1, "EVALUATE")
+            with patch.object(solver, "_tier_records", side_effect=lambda _tier: self.synthetic_rows()):
+                with self.assertRaises(solver.SolverError):
+                    solver.run_evaluation(
+                        checkpoint,
+                        max_candidates=1,
+                        max_seconds=None,
+                        checkpoint_path=checkpoint_path,
+                        result_path=result_path,
+                        evaluator=lambda _value: "ERROR",
+                    )
+            self.assertFalse(checkpoint_path.exists())
+            self.assertFalse(result_path.exists())
 
 
 class TestCheckpointAndCli(unittest.TestCase):
@@ -89,6 +160,17 @@ class TestCheckpointAndCli(unittest.TestCase):
 
     def test_dry_run_requires_explicit_limit_and_checkpoint(self):
         completed = self.run_cli("--dry-run", "--tier", "1")
+        self.assertNotEqual(completed.returncode, 0)
+
+    def test_evaluation_requires_explicit_public_puzzle_authorization(self):
+        with tempfile.TemporaryDirectory() as directory:
+            completed = self.run_cli(
+                "--evaluate",
+                "--tier", "1",
+                "--max-candidates", "0",
+                "--checkpoint", str(Path(directory) / "checkpoint.json"),
+                "--result", str(Path(directory) / "result.json"),
+            )
         self.assertNotEqual(completed.returncode, 0)
 
     def test_real_search_interfaces_do_not_exist(self):
