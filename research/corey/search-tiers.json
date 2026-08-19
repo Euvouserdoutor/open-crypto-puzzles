@@ -1,0 +1,105 @@
+{
+  "assignment": {
+    "deduplication": "exact-candidate-identity-first-occurrence",
+    "precedence": [
+      "H001",
+      "H002",
+      "H003",
+      "H004",
+      "H005"
+    ],
+    "rule": "assign each identity to the first hypothesis containing it"
+  },
+  "candidate_configuration_fingerprint": "41d384b6efa28c008582227f64f4bccc618edd2acdfeff5fe84df83f494a4a52",
+  "candidate_identity": "sha256(nfkd(raw_candidate).utf8)",
+  "coverage": {
+    "historically_proven_unique_subtractable": 0,
+    "pairwise_tier_overlap": 0,
+    "total_unique": 59656
+  },
+  "execution": {
+    "automatic_tier_progression": false,
+    "network_access": false,
+    "one_explicit_tier_per_run": true
+  },
+  "schema": "corey-tier-strategy-canonical-v1",
+  "strategy_id": "corey-r001-r006-tier-strategy",
+  "supersedes_contract_fingerprint": "10940a5429829adfaa6095e44103c628f8fcc046b14c2ca4125925f66b7818bf",
+  "tiers": [
+    {
+      "expected_unique": 16,
+      "hypothesis": "H001",
+      "order": 1,
+      "ordering": [
+        "R001 first-occurrence generator order",
+        "R002 first-occurrence generator order"
+      ],
+      "set_expression": "H001",
+      "source_rules": [
+        "R001",
+        "R002"
+      ]
+    },
+    {
+      "expected_unique": 24,
+      "hypothesis": "H002",
+      "order": 2,
+      "ordering": [
+        "R003 first-occurrence generator order",
+        "skip identities assigned to T1"
+      ],
+      "set_expression": "H002\\H001",
+      "source_rules": [
+        "R003"
+      ]
+    },
+    {
+      "expected_unique": 864,
+      "hypothesis": "H003",
+      "order": 3,
+      "ordering": [
+        "R004 deterministic nested-loop order",
+        "token positions left-to-right",
+        "styles concat,space,underscore,hyphen,camel,pascal",
+        "skip identities assigned to T1-T2"
+      ],
+      "set_expression": "H003\\(H001|H002)",
+      "source_rules": [
+        "R004"
+      ]
+    },
+    {
+      "expected_unique": 10368,
+      "hypothesis": "H004",
+      "order": 4,
+      "ordering": [
+        "R005 deterministic nested-loop order",
+        "token positions left-to-right",
+        "styles concat,space,underscore,hyphen,camel,pascal",
+        "skip identities assigned to T1-T3"
+      ],
+      "set_expression": "H004\\(H001|H002|H003)",
+      "source_rules": [
+        "R005"
+      ]
+    },
+    {
+      "expected_unique": 48384,
+      "hypothesis": "H005",
+      "order": 5,
+      "ordering": [
+        "R006 deterministic nested-loop order",
+        "token positions left-to-right",
+        "boundary-1 styles concat,space,underscore,hyphen,camel,pascal",
+        "boundary-2 styles concat,space,underscore,hyphen,camel,pascal",
+        "first-occurrence internal deduplication",
+        "skip identities assigned to T1-T4"
+      ],
+      "set_expression": "H005\\(H001|H002|H003|H004)",
+      "source_rules": [
+        "R006"
+      ]
+    }
+  ],
+  "unicode_mode": "STANDARD_BIP39_NFKD"
+}
