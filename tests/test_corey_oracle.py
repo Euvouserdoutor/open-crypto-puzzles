@@ -114,7 +114,7 @@ class TestDeterminismErrorsAndCli(unittest.TestCase):
             capture_output=True,
             check=False,
         )
-        self.assertEqual(run.returncode, 0)
+        self.assertEqual(run.returncode, 1)
         self.assertTrue(run.stdout.startswith("NO_MATCH\n"))
         self.assertNotIn(secret_marker, run.stdout + run.stderr)
         self.assertNotIn("private", run.stdout.lower())
