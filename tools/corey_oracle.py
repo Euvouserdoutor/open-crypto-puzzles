@@ -458,7 +458,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(result.value)
     if args.debug:
         print(_safe_debug(trace))
-    return 0
+    return 0 if result is OracleResult.MATCH else 1
 
 
 if __name__ == "__main__":
